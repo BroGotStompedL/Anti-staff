@@ -34,7 +34,7 @@ local notifications = {}
 local bombSound = Instance.new("Sound")
 bombSound.Name = "AntiStaffBombSound"
 bombSound.SoundId = SOUND_ID
-bombSound.Volume = 1
+bombSound.Volume = 0.5
 bombSound.Parent = SoundService
 
 --------------------------------------------------
