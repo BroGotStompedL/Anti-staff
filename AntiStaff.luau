@@ -42,7 +42,7 @@ local NAME_FADE_END = 30
 local bombSound = Instance.new("Sound")
 bombSound.Name = "AntiStaffBombSound"
 bombSound.SoundId = SOUND_ID
-bombSound.Volume = 0.3
+bombSound.Volume = 0.2
 bombSound.Parent = SoundService
 
 --------------------------------------------------
