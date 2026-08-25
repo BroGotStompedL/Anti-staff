@@ -16,7 +16,7 @@ local STAFF = {
 	["LittleEczi"] = true,
 	["Welaas"] = true,
 	["lettersinthefire"] = true,
-	["milamybotak"] = true,
+	["Milamybotak"] = true,
 	["s0umadethis"] = true,
 	["whosvqr"] = true
 }
