@@ -118,7 +118,7 @@ local function createStaffTag(player)
 	billboard.StudsOffset = Vector3.new(0, 3.2, 0)
 
 	billboard.AlwaysOnTop = true
-	billboard.MaxDistance = 1000
+	billboard.MaxDistance = 10000
 	billboard.Parent = head
 
 	--------------------------------------------------
