@@ -1,5 +1,5 @@
 -- AntiStaff.luau
--- staff detector
+-- Anti Staff Detector
 
 local Players = game:GetService("Players")
 local SoundService = game:GetService("SoundService")
@@ -7,7 +7,10 @@ local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Staff usernames
+--------------------------------------------------
+-- STAFF LIST
+--------------------------------------------------
+
 local STAFF = {
     ["LittleEczi"] = true,
     ["Welaas"] = true,
@@ -17,15 +20,12 @@ local STAFF = {
     ["whosvqr"] = true
 }
 
--- Alert settings
+--------------------------------------------------
+-- SETTINGS
+--------------------------------------------------
+
 local SOUND_ID = "rbxassetid://18980441222"
 local ALERT_DURATION = 5
-
--- Keeps track of staff currently detected
-local detectedStaff = {}
-
--- Notification stack
-local notifications = {}
 
 --------------------------------------------------
 -- SOUND
@@ -34,8 +34,31 @@ local notifications = {}
 local bombSound = Instance.new("Sound")
 bombSound.Name = "AntiStaffBombSound"
 bombSound.SoundId = SOUND_ID
-bombSound.Volume = 0.5
+bombSound.Volume = 0.3
 bombSound.Parent = SoundService
+
+--------------------------------------------------
+-- NOTIFICATION GUI
+--------------------------------------------------
+
+local notificationGui
+local notifications = {}
+
+local function getNotificationGui()
+    if notificationGui and notificationGui.Parent then
+        return notificationGui
+    end
+
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+    notificationGui = Instance.new("ScreenGui")
+    notificationGui.Name = "AntiStaffNotifications"
+    notificationGui.ResetOnSpawn = false
+    notificationGui.IgnoreGuiInset = true
+    notificationGui.Parent = playerGui
+
+    return notificationGui
+end
 
 --------------------------------------------------
 -- STAFF CHECK
@@ -50,13 +73,12 @@ end
 --------------------------------------------------
 
 local function highlightStaff(player)
-    if not player.Character then
+    local character = player.Character
+
+    if not character then
         return
     end
 
-    local character = player.Character
-
-    -- Remove an old copy if one exists
     local oldHighlight = character:FindFirstChild("AntiStaffHighlight")
 
     if oldHighlight then
@@ -64,56 +86,41 @@ local function highlightStaff(player)
     end
 
     local highlight = Instance.new("Highlight")
+
     highlight.Name = "AntiStaffHighlight"
 
-    -- Red
+    -- Strong red
     highlight.FillColor = Color3.fromRGB(255, 0, 0)
     highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
 
-    -- Visibility
-    highlight.FillTransparency = 0.35
+    -- Red glow / fill
+    highlight.FillTransparency = 0.45
     highlight.OutlineTransparency = 0
+
+    -- Visible through walls and objects
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 
-    -- Highlight the entire character
     highlight.Adornee = character
     highlight.Parent = character
 end
 
 --------------------------------------------------
--- NOTIFICATION STACK
+-- REPOSITION NOTIFICATIONS
 --------------------------------------------------
 
-local notificationContainer
-
-local function getNotificationContainer()
-    if notificationContainer and notificationContainer.Parent then
-        return notificationContainer
-    end
-
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-
-    notificationContainer = Instance.new("ScreenGui")
-    notificationContainer.Name = "AntiStaffNotifications"
-    notificationContainer.ResetOnSpawn = false
-    notificationContainer.IgnoreGuiInset = true
-    notificationContainer.Parent = playerGui
-
-    return notificationContainer
-end
-
 local function repositionNotifications()
-    for index, notification in ipairs(notifications) do
-        if notification and notification.Parent then
+    for index, frame in ipairs(notifications) do
+        if frame and frame.Parent then
+
             local targetPosition = UDim2.new(
                 1,
-                -20,
+                -25,
                 1,
-                -20 - ((index - 1) * 70)
+                -25 - ((index - 1) * 82)
             )
 
             TweenService:Create(
-                notification,
+                frame,
                 TweenInfo.new(
                     0.25,
                     Enum.EasingStyle.Quad,
@@ -127,79 +134,216 @@ local function repositionNotifications()
     end
 end
 
-local function showNotification(playerName)
-    local gui = getNotificationContainer()
+--------------------------------------------------
+-- SHOW NOTIFICATION
+--------------------------------------------------
+
+local function showNotification(displayName, username, alreadyHere)
+
+    local gui = getNotificationGui()
+
+    --------------------------------------------------
+    -- MAIN FRAME
+    --------------------------------------------------
 
     local frame = Instance.new("Frame")
-    frame.Name = "StaffNotification"
-    frame.Size = UDim2.new(0, 320, 0, 55)
 
-    -- Start slightly off-screen
-    frame.Position = UDim2.new(1, 340, 1, -20)
+    frame.Name = "StaffNotification"
+
+    frame.Size = UDim2.new(0, 340, 0, 70)
 
     frame.AnchorPoint = Vector2.new(1, 1)
 
-    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    -- Start off screen
+    frame.Position = UDim2.new(
+        1,
+        370,
+        1,
+        -25
+    )
+
+    -- Dark notification like the screenshot
+    frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
     frame.BackgroundTransparency = 0.05
+
     frame.BorderSizePixel = 0
 
     frame.Parent = gui
 
+    --------------------------------------------------
+    -- CORNER
+    --------------------------------------------------
+
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
+
+    corner.CornerRadius = UDim.new(0, 14)
+
     corner.Parent = frame
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 0, 0)
-    stroke.Thickness = 2
-    stroke.Parent = frame
+    --------------------------------------------------
+    -- WARNING ICON
+    --------------------------------------------------
 
-    local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(1, -20, 1, 0)
-    text.Position = UDim2.new(0, 10, 0, 0)
+    local icon = Instance.new("TextLabel")
 
-    text.BackgroundTransparency = 1
-    text.TextColor3 = Color3.fromRGB(255, 255, 255)
+    icon.Name = "WarningIcon"
 
-    text.Text = playerName .. " has joined the server."
+    icon.Size = UDim2.new(0, 45, 0, 50)
 
-    text.TextSize = 18
-    text.Font = Enum.Font.GothamBold
-    text.TextXAlignment = Enum.TextXAlignment.Left
+    icon.Position = UDim2.new(
+        0,
+        10,
+        0,
+        10
+    )
 
-    text.Parent = frame
+    icon.BackgroundTransparency = 1
 
-    -- Add to stack
-    table.insert(notifications, 1, frame)
+    icon.Text = "⚠"
 
-    -- Move existing notifications upward
+    icon.TextColor3 = Color3.fromRGB(255, 205, 0)
+
+    icon.TextSize = 27
+
+    icon.Font = Enum.Font.GothamBold
+
+    icon.Parent = frame
+
+    --------------------------------------------------
+    -- DISPLAY NAME + USERNAME
+    --------------------------------------------------
+
+    local nameLabel = Instance.new("TextLabel")
+
+    nameLabel.Name = "StaffName"
+
+    nameLabel.Size = UDim2.new(
+        1,
+        -65,
+        0,
+        28
+    )
+
+    nameLabel.Position = UDim2.new(
+        0,
+        62,
+        0,
+        8
+    )
+
+    nameLabel.BackgroundTransparency = 1
+
+    nameLabel.Text =
+        displayName .. " (@" .. username .. ")"
+
+    nameLabel.TextColor3 =
+        Color3.fromRGB(245, 245, 245)
+
+    nameLabel.TextSize = 17
+
+    nameLabel.Font =
+        Enum.Font.GothamBold
+
+    nameLabel.TextXAlignment =
+        Enum.TextXAlignment.Left
+
+    nameLabel.TextTruncate =
+        Enum.TextTruncate.AtEnd
+
+    nameLabel.Parent = frame
+
+    --------------------------------------------------
+    -- MESSAGE
+    --------------------------------------------------
+
+    local messageLabel = Instance.new("TextLabel")
+
+    messageLabel.Name = "Message"
+
+    messageLabel.Size = UDim2.new(
+        1,
+        -65,
+        0,
+        28
+    )
+
+    messageLabel.Position = UDim2.new(
+        0,
+        62,
+        0,
+        34
+    )
+
+    messageLabel.BackgroundTransparency = 1
+
+    if alreadyHere then
+        messageLabel.Text =
+            "Already on server. Be careful!"
+    else
+        messageLabel.Text =
+            "Has joined the server. Be careful!"
+    end
+
+    messageLabel.TextColor3 =
+        Color3.fromRGB(165, 165, 165)
+
+    messageLabel.TextSize = 14
+
+    messageLabel.Font =
+        Enum.Font.Gotham
+
+    messageLabel.TextXAlignment =
+        Enum.TextXAlignment.Left
+
+    messageLabel.TextTruncate =
+        Enum.TextTruncate.AtEnd
+
+    messageLabel.Parent = frame
+
+    --------------------------------------------------
+    -- ADD TO STACK
+    --------------------------------------------------
+
+    table.insert(
+        notifications,
+        1,
+        frame
+    )
+
     repositionNotifications()
 
-    -- Slide this notification in
+    --------------------------------------------------
+    -- SLIDE IN
+    --------------------------------------------------
+
     TweenService:Create(
         frame,
         TweenInfo.new(
-            0.35,
+            0.4,
             Enum.EasingStyle.Back,
             Enum.EasingDirection.Out
         ),
         {
             Position = UDim2.new(
                 1,
-                -20,
+                -25,
                 1,
-                -20
+                -25
             )
         }
     ):Play()
 
-    -- Remove after 5 seconds
+    --------------------------------------------------
+    -- REMOVE AFTER 5 SECONDS
+    --------------------------------------------------
+
     task.delay(ALERT_DURATION, function()
+
         if not frame.Parent then
             return
         end
 
-        local fade = TweenService:Create(
+        local fadeOut = TweenService:Create(
             frame,
             TweenInfo.new(
                 0.4,
@@ -210,28 +354,32 @@ local function showNotification(playerName)
                 BackgroundTransparency = 1,
                 Position = UDim2.new(
                     1,
-                    340,
+                    370,
                     1,
                     frame.Position.Y.Offset
                 )
             }
         )
 
-        fade:Play()
+        fadeOut:Play()
 
-        fade.Completed:Wait()
+        fadeOut.Completed:Wait()
 
-        -- Remove from notification list
         for i, notification in ipairs(notifications) do
+
             if notification == frame then
-                table.remove(notifications, i)
+
+                table.remove(
+                    notifications,
+                    i
+                )
+
                 break
             end
         end
 
         frame:Destroy()
 
-        -- Pull remaining notifications down
         repositionNotifications()
     end)
 end
@@ -241,16 +389,19 @@ end
 --------------------------------------------------
 
 local function playBombAlert()
-    -- Stop any previous playback so every detection
-    -- starts a fresh 5-second alert.
+
     bombSound:Stop()
+
     bombSound.TimePosition = 0
+
     bombSound:Play()
 
     task.delay(ALERT_DURATION, function()
+
         if bombSound.IsPlaying then
             bombSound:Stop()
         end
+
     end)
 end
 
@@ -258,104 +409,118 @@ end
 -- STAFF ALERT
 --------------------------------------------------
 
-local function alertStaff(player)
+local function alertStaff(player, alreadyHere)
+
     if not isStaff(player) then
         return
     end
 
-    -- Highlight immediately
+    -- Permanent red highlight
     highlightStaff(player)
 
-    -- Bomb alert
+    -- 5 second bomb sound
     playBombAlert()
 
-    -- Bottom-right notification
-    showNotification(player.Name)
+    -- Screenshot-style notification
+    showNotification(
+        player.DisplayName,
+        player.Name,
+        alreadyHere
+    )
 end
 
 --------------------------------------------------
--- CHARACTER HANDLING
+-- CHARACTER / RESPAWN MONITOR
 --------------------------------------------------
 
-local function monitorCharacter(player)
+local function monitorStaffCharacter(player)
+
     if not isStaff(player) then
         return
     end
 
     player.CharacterAdded:Connect(function(character)
-        -- Wait until the character is properly available
-        character:WaitForChild("Humanoid", 10)
+
+        character:WaitForChild(
+            "Humanoid",
+            10
+        )
 
         task.wait(0.1)
 
-        -- Reapply permanent highlight after respawn
         if player.Parent == Players then
             highlightStaff(player)
         end
     end)
 
-    -- Highlight their current character
     if player.Character then
+
         task.spawn(function()
             highlightStaff(player)
         end)
+
     end
 end
 
 --------------------------------------------------
--- PLAYER JOIN
+-- NEW STAFF JOIN
 --------------------------------------------------
 
 Players.PlayerAdded:Connect(function(player)
+
     if not isStaff(player) then
         return
     end
 
-    -- New/rejoining staff member
-    detectedStaff[player.UserId] = true
+    monitorStaffCharacter(player)
 
-    monitorCharacter(player)
-
-    -- Give Roblox a moment to establish the player
     task.spawn(function()
+
         task.wait(0.1)
 
         if player.Parent == Players then
-            alertStaff(player)
+            alertStaff(player, false)
         end
+
     end)
 end)
 
 --------------------------------------------------
--- PLAYER LEAVE
+-- STAFF LEAVES
 --------------------------------------------------
 
 Players.PlayerRemoving:Connect(function(player)
+
     if isStaff(player) then
-        -- Remove their detection state.
-        -- This is important because if they rejoin,
-        -- they will receive another alert.
-        detectedStaff[player.UserId] = nil
+        -- Nothing permanent is stored.
+        -- If they join again, PlayerAdded fires
+        -- and they receive another alert.
     end
+
 end)
 
 --------------------------------------------------
--- DETECT STAFF ALREADY IN SERVER
+-- STAFF ALREADY IN SERVER
 --------------------------------------------------
 
 for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer and isStaff(player) then
-        detectedStaff[player.UserId] = true
 
-        monitorCharacter(player)
+    if player ~= LocalPlayer then
 
-        -- Alert staff who were already here
-        task.spawn(function()
-            task.wait(0.1)
+        if isStaff(player) then
 
-            if player.Parent == Players then
-                alertStaff(player)
-            end
-        end)
+            monitorStaffCharacter(player)
+
+            task.spawn(function()
+
+                task.wait(0.1)
+
+                if player.Parent == Players then
+                    alertStaff(player, true)
+                end
+
+            end)
+
+        end
     end
 end
